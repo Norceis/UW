@@ -349,38 +349,32 @@ def betterEvaluationFunction(currentGameState: GameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    successorGameState = currentGameState.generatePacmanSuccessor(action)
-    newPos = successorGameState.getPacmanPosition()
-    newFood = successorGameState.getFood()
-    newGhostStates = successorGameState.getGhostStates()
+
+    newPos = currentGameState.getPacmanPosition()
+    newFood = currentGameState.getFood()
+    newGhostStates = currentGameState.getGhostStates()
+    current_score = currentGameState.getScore()
 
     if currentGameState.isLose():
         return -float("inf")
     elif currentGameState.isWin():
         return float("inf")
 
-    no_action = 0
     danger = 0
-    has_food = 0
     point_score = 0
-
-    if action == 'Stop':
-        no_action -= 20
 
     for ghost in newGhostStates:
         if manhattan_distance(ghost.getPosition(), newPos) < 3:
             danger = -40
             break
 
-    if currentGameState.hasFood(newPos[0], newPos[1]):
-        has_food = 20
 
     for food_x in range(newFood.width):
         for food_y in range(newFood.height):
-            if successorGameState.hasFood(food_x, food_y):
+            if currentGameState.hasFood(food_x, food_y):
                 point_score += np.exp(-manhattan_distance((food_x, food_y), newPos) + 1)
 
-    score = 1 * danger + 1 * has_food + 2 * point_score + no_action
+    score = 1 * danger + 1 * point_score + 10 * current_score
     return score
 
 
