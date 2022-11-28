@@ -1,30 +1,32 @@
 import statistics
 import itertools
+import numpy as np
+import random
+import copy
+from collections import defaultdict
 
 class Nim():
 
     def __init__(self, n_rows: int = 4):
-        self.initial_state = [int((x + 1)) for x in range(0, n_rows * 2, 2)]
+        self.initial_state = tuple([int((x + 1)) for x in range(0, n_rows * 2, 2)])
         self.possible_values_in_rows = []
+
         for idx in self.initial_state:
             temp_list = []
             for ldx in range(idx+1):
                 temp_list.append(ldx)
             self.possible_values_in_rows.append(temp_list)
 
-        self.states = (set(itertools.product(*self.possible_values_in_rows)))
+        self.states = (tuple(itertools.product(*self.possible_values_in_rows)))
         self.n_states = len(self.states)
-        self.current_state = self.initial_state
-        self.transition_probs = dict()
+        self.current_state = copy.deepcopy(self.initial_state)
 
-    def fill_transition_probs(self):
-        for state in self.states:
-            self.transition_probs[state] = dict()
-            actions = self.get_possible_actions(state)
-            for action in actions:
-                self.transition_probs[state][action] = dict()
-                new_state = tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(state, action)])
-                self.transition_probs[state][action][new_state] = 1
+        self.win_states = list()
+        for idx in range(n_rows):
+            list_of_zeros = [0] * n_rows
+            list_of_zeros[idx] = 1
+            self.win_states.append(tuple(list_of_zeros))
+        self.win_states = tuple(self.win_states)
 
     def reset(self):
         self.current_state = self.initial_state
@@ -56,24 +58,44 @@ class Nim():
     def get_next_states(self, state, action):
         assert action in self.get_possible_actions(
             state), "cannot do action %s from state %s" % (action, state)
-        return self.transition_probs[state][action]
+        # return self.transition_probs[state][action]
+        next_state = tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(state, action)])
+        return next_state
 
     def get_number_of_states(self):
         return self.n_states
+
+    def nim_sum(self, state):
+        binary_rows = [format(row, 'b') for row in state]
+        max_len = max([len(row) for row in binary_rows])
+        binary_rows = ['0' * (max_len - len(row)) + row for row in binary_rows]
+
+        result = ''
+        for idx in range(max_len):
+            res = 0
+            for row in binary_rows:
+                res += int(row[idx])
+                res %= 2
+            result += str(res)
+        return result
 
     def get_reward(self, state, action, next_state):
         assert action in self.get_possible_actions(
             state), "cannot do action %s from state %s" % (action, state)
 
-        reward = -1
-        if self.is_terminal(next_state):
-            reward = 100
+        reward = -5
+
+        if next_state in self.win_states:
+            reward += 100
+
+        elif not int(self.nim_sum(next_state)):
+            reward += 10
 
         return reward
 
     def step(self, action):
         prev_state = self.current_state
-        self.current_state = [idx_1 - idx_2 for idx_1, idx_2 in zip(self.current_state, action)]
+        self.current_state = tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(self.current_state, action)])
         return self.current_state, self.get_reward(prev_state, action, self.current_state), \
                self.is_terminal(self.current_state), None
 
@@ -81,7 +103,6 @@ class Nim():
 
 def value_iteration(nim, gamma, theta):
     V = dict()
-    nim.fill_transition_probs()
 
     for state in nim.get_all_states():
         V[state] = 0
@@ -102,13 +123,10 @@ def value_iteration(nim, gamma, theta):
             for action in actions:
 
                 state_action_values[action] = 0
-                next_states = nim.get_next_states(current_state, action)
-
-                for next_state in next_states:
-                    state_action_values[action] += next_states[next_state] * (nim.get_reward(current_state, action, next_state) + gamma * V[next_state])
+                next_state = nim.get_next_states(current_state, action)
+                state_action_values[action] += nim.get_reward(current_state, action, next_state) + gamma * V[next_state]
 
             V[current_state] = max(list(state_action_values.values()))
-            print(abs(statistics.fmean(V.values()) - last_mean_value), theta)
         if abs(statistics.fmean(V.values()) - last_mean_value) < theta:
             break
 
@@ -118,15 +136,10 @@ def value_iteration(nim, gamma, theta):
         actions = nim.get_possible_actions(current_state)
 
         for action in actions:
-
-
             state_action_values[action] = 0
-            next_states = nim.get_next_states(current_state, action)
-
-
-            for next_state in next_states:
-                state_action_values[action] += next_states[next_state] * (nim.get_reward(current_state, action, next_state) + gamma * V[next_state])
-
+            next_state = nim.get_next_states(current_state, action)
+            state_action_values[action] += (nim.get_reward(current_state, action, next_state) + gamma * V[next_state])
+        # print(f'{current_state} -------- {state_action_values}')
         max_value_action = max(state_action_values, key=state_action_values.get)
 
         if policy[current_state] != max_value_action:
@@ -134,192 +147,28 @@ def value_iteration(nim, gamma, theta):
 
     return policy, V
 
-# nim = Nim(4)
-# optimal_policy, optimal_value = value_iteration(nim, 0.9, 0.001)
-# print(optimal_policy, optimal_value)
-
-import random
-from collections import defaultdict
+nim = Nim(4)
+optimal_policy, optimal_value = value_iteration(nim, 0.9, 0.001)
 
 
-class ExpectedSARSAAgent:
-    def __init__(self, alpha, epsilon, discount, get_legal_actions):
-        """
-        Q-Learning Agent
-        based on https://inst.eecs.berkeley.edu/~cs188/sp19/projects.html
-        Instance variables you have access to
-          - self.epsilon (exploration prob)
-          - self.alpha (learning rate)
-          - self.discount (discount rate aka gamma)
-
-        Functions you should use
-          - self.get_legal_actions(state) {state, hashable -> list of actions, each is hashable}
-            which returns legal actions for a state
-          - self.get_qvalue(state,action)
-            which returns Q(state,action)
-          - self.set_qvalue(state,action,value)
-            which sets Q(state,action) := value
-        !!!Important!!!
-        Note: please avoid using self._qValues directly.
-            There's a special self.get_qvalue/set_qvalue for that.
-        """
-
-        self.get_legal_actions = get_legal_actions
-        self._qvalues = defaultdict(lambda: defaultdict(lambda: 0))
-        self.alpha = alpha
-        self.epsilon = epsilon
-        self.discount = discount
-
-    def get_qvalue(self, state, action):
-        """ Returns Q(state,action) """
-        return self._qvalues[state][action]
-
-    def set_qvalue(self, state, action, value):
-        """ Sets the Qvalue for [state,action] to the given value """
-        self._qvalues[state][action] = value
-
-    #---------------------START OF YOUR CODE---------------------#
-
-    def get_value(self, state):
-        """
-        Compute your agent's estimate of V(s) using current q-values
-        V(s) = max_over_action Q(state,action) over possible actions.
-        Note: please take into account that q-values can be negative.
-        """
-        possible_actions = self.get_legal_actions(state)
-
-        # If there are no legal actions, return 0.0
-        if len(possible_actions) == 0:
-            return 0.0
-
-        #
-        # INSERT CODE HERE to get maximum possible value for a given state
-        #
-
-        return max([self.get_qvalue(state, action) for action in possible_actions])
-
-    def update(self, state, action, reward, next_state):
-        """
-        You should do your Q-Value update here:
-           Q(s,a) := (1 - alpha) * Q(s,a) + alpha * (r + gamma * \sum_a \pi(a|s') Q(s', a))
-        """
-
-        # agent parameters
-        gamma = self.discount
-        learning_rate = self.alpha
-
-        sum_of_strategies = list()
-
-        [sum_of_strategies.append(1 / len(self.get_legal_actions(next_state)) * self.get_qvalue(next_state, action)) for action in self.get_legal_actions(next_state)]
-
-        value = (1 - learning_rate) * self.get_qvalue(state, action) + learning_rate * (reward + gamma * sum(sum_of_strategies))
-        self.set_qvalue(state, action, value)
-
-    def get_best_action(self, state):
-        """
-        Compute the best action to take in a state (using current q-values).
-        """
-        possible_actions = self.get_legal_actions(state)
-
-        # If there are no legal actions, return None
-        if len(possible_actions) == 0:
-            return None
-
-        possible_actions_dict = dict()
-
-        for action in possible_actions:
-            possible_actions_dict[action] = self.get_qvalue(state, action)
-
-        sorted_dict = sorted(possible_actions_dict.items(), key=lambda kv: kv[1])
-
-        return random.choice([k for k, v in possible_actions_dict.items() if v == sorted_dict[-1][-1]])
-
-    def get_action(self, state):
-        """
-        Compute the action to take in the current state, including exploration.
-        With probability self.epsilon, we should take a random action.
-            otherwise - the best policy action (self.get_best_action).
-
-        Note: To pick randomly from a list, use random.choice(list).
-              To pick True or False with a given probablity, generate uniform number in [0, 1]
-              and compare it with your probability
-        """
-
-        # Pick Action
-        possible_actions = self.get_legal_actions(state)
-
-        # If there are no legal actions, return None
-        if len(possible_actions) == 0:
-            return None
-
-        # agent parameters:
-        epsilon = self.epsilon
-
-        if random.random() < epsilon:
-            return random.choice(possible_actions)
-
-        return self.get_best_action(state)
-
-    def turn_off_learning(self):
-        """
-        Function turns off agent learning.
-        """
-        self.epsilon = 0
-        self.alpha = 0
-
-def play_and_train(env, agent):
-    """
-    This function should
-    - run a full game, actions given by agent's e-greedy policy
-    - train agent using agent.update(...) whenever it is possible
-    - return total reward
-    """
-    total_reward = 0.0
-    state = env.reset()
-
-    done = False
-
-    while not done:
-        # get agent to pick action given state state.
-        action = agent.get_action(state)
-
-        next_state, reward, done, _ = env.step(action)
-
-        agent.update(state, action, reward, next_state)
-
-        state = next_state
-        total_reward += reward
-        if done:
-            break
-
-    return total_reward
-
-# nim = Nim()
-# agent = ExpectedSARSAAgent(alpha=0.1, epsilon=0.1, discount=0.99,
-#                        get_legal_actions=nim.get_possible_actions)
-#
-# for i in range(10000):
-#     play_and_train(nim, agent)
-#
-# agent.turn_off_learning()
-#
-# for i in range(10):
-#     print(play_and_train(nim, agent))
-
-# play at random
-nim = Nim()
+# play (player 1) value iteration vs random
 player_1_wins = 0
 player_2_wins = 0
-games = 0
 
-for _ in range(1000):
+for _ in range(10000):
+    nim.reset()
+    turn = 0
     while not nim.is_terminal(nim.current_state):
-        random_action = random.choice(nim.get_possible_actions(nim.current_state))
-        nim.step(random_action)
+        if not turn % 2:
+            action = random.choice(nim.get_possible_actions(nim.current_state))
+        else:
+            action = optimal_policy[tuple(nim.current_state)]
+        nim.step(action)
         if nim.is_terminal(nim.current_state):
-            games += 1
-            if not games % 2:
+            if turn % 2:
+                player_1_wins += 1
+            else:
                 player_2_wins += 1
-            player_1_wins += 1
+        turn += 1
 
-print(player_1_wins, player_2_wins, games)
+print(f'Algorithm winrate: {player_2_wins * 100 / (player_1_wins + player_2_wins)}%')
