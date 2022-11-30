@@ -152,7 +152,7 @@ class MonteCarloTreeSearchNode():
 
         while not self.is_game_over_state(current_rollout_state):
             possible_moves = self.get_legal_actions_state(current_rollout_state)
-
+            # print(current_rollout_state)
             action = self.rollout_policy(possible_moves)
             current_rollout_state = self.move_state(current_rollout_state, action)
         return self.game_result_state(current_rollout_state)
@@ -214,29 +214,6 @@ class MonteCarloTreeSearchNode():
 
         return tuple(possible_actions)
 
-    def is_game_over(self):
-        if not any(self.state): return True
-        # if self.state in self.win_states: return True
-        return False
-
-    def game_result(self):
-        if self.is_game_over():
-            return -1
-
-        elif self.state in self.win_states:
-            return 1
-
-        else:
-            return 0
-
-    def move(self, action):
-        return tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(self.state, action)])
-
-    def is_game_over_state(self, state):
-        if not any(state): return True
-        # if state in self.win_states: return True
-        return False
-
     def get_legal_actions_state(self, state):
         possible_actions = []
 
@@ -253,8 +230,26 @@ class MonteCarloTreeSearchNode():
 
         return tuple(possible_actions)
 
-    def move_state(self, state, action):
-        return tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(state, action)])
+    def is_game_over(self):
+        if not any(self.state): return True
+        # if self.state in self.win_states: return True
+        return False
+
+    def is_game_over_state(self, state):
+        if not any(state): return True
+        # if state in self.win_states: return True
+        return False
+
+
+    def game_result(self):
+        if self.is_game_over():
+            return -1
+
+        elif self.state in self.win_states:
+            return 1
+
+        else:
+            return 0
 
     def game_result_state(self, state):
         if self.is_game_over_state(state):
@@ -265,6 +260,19 @@ class MonteCarloTreeSearchNode():
 
         else:
             return 0
+
+    def move(self, action):
+        return tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(self.state, action)])
+
+    def move_state(self, state, action):
+        return tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(state, action)])
+
+
+
+
+
+
+
 
 # root = MonteCarloTreeSearchNode(state=(1, 3, 5, 7))
 # root.untried_actions()
