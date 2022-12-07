@@ -113,13 +113,16 @@ class MonteCarloTreeSearchNode():
         self._results = defaultdict(int)
         self._results[1] = 0
         self._results[-1] = 0
-        self._untried_actions = None
+
         self.win_states = list()
         for idx in range(len(self.state)):
             list_of_zeros = [0] * len(self.state)
             list_of_zeros[idx] = 1
             self.win_states.append(tuple(list_of_zeros))
         self.win_states = tuple(self.win_states)
+
+        self._untried_actions = self.untried_actions()
+
         # print('new')
 
     def untried_actions(self):
@@ -140,7 +143,6 @@ class MonteCarloTreeSearchNode():
         next_state = self.move(action)
         child_node = MonteCarloTreeSearchNode(
             next_state, parent=self, parent_action=action)
-        child_node.untried_actions()
         self.children.append(child_node)
         return child_node
 
@@ -168,7 +170,7 @@ class MonteCarloTreeSearchNode():
         return len(self._untried_actions) == 0
 
     def best_child(self, c_param=0.1):
-
+        # print(self.children)
         choices_weights = [(c.q() / c.n()) + c_param * np.sqrt((2 * np.log(self.n()) / c.n())) for c in self.children]
         return self.children[np.argmax(choices_weights)]
 
@@ -179,8 +181,9 @@ class MonteCarloTreeSearchNode():
     def _tree_policy(self):
 
         current_node = self
-        while not current_node.is_terminal_node():
 
+        while not current_node.is_terminal_node():
+            # print(current_node.children)
             if not current_node.is_fully_expanded():
                 return current_node.expand()
             else:
@@ -232,17 +235,17 @@ class MonteCarloTreeSearchNode():
 
     def is_game_over(self):
         if not any(self.state): return True
-        # if self.state in self.win_states: return True
+        if self.state in self.win_states: return True
         return False
 
     def is_game_over_state(self, state):
         if not any(state): return True
-        # if state in self.win_states: return True
+        if state in self.win_states: return True
         return False
 
 
     def game_result(self):
-        if self.is_game_over():
+        if not any(self.state):
             return -1
 
         elif self.state in self.win_states:
@@ -252,7 +255,7 @@ class MonteCarloTreeSearchNode():
             return 0
 
     def game_result_state(self, state):
-        if self.is_game_over_state(state):
+        if not any(state):
             return -1
 
         elif state in self.win_states:
@@ -291,7 +294,6 @@ for _ in range(100):
     while not nim.is_terminal(nim.current_state):
         if not turn % 2:
             node = MonteCarloTreeSearchNode(state=nim.current_state)
-            node.untried_actions()
             action = node.best_action().parent_action
         else:
             action = random.choice(nim.get_possible_actions(nim.current_state))
