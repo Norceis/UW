@@ -151,13 +151,16 @@ class MonteCarloTreeSearchNode():
 
     def rollout(self):
         current_rollout_state = self.state
-
+        invert_reward = False
         while not self.is_game_over_state(current_rollout_state):
             possible_moves = self.get_legal_actions_state(current_rollout_state)
             # print(current_rollout_state)
             action = self.rollout_policy(possible_moves)
             current_rollout_state = self.move_state(current_rollout_state, action)
-        return self.game_result_state(current_rollout_state)
+            invert_reward = not invert_reward
+
+        reward = self.game_result_state(current_rollout_state)
+        return -1 * reward if invert_reward else reward
 
     def backpropagate(self, result):
         self._number_of_visits += 1.
@@ -235,12 +238,12 @@ class MonteCarloTreeSearchNode():
 
     def is_game_over(self):
         if not any(self.state): return True
-        if self.state in self.win_states: return True
+        # if self.state in self.win_states: return True
         return False
 
     def is_game_over_state(self, state):
         if not any(state): return True
-        if state in self.win_states: return True
+        # if state in self.win_states: return True
         return False
 
 
