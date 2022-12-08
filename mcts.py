@@ -120,7 +120,6 @@ class MonteCarloTreeSearchNode():
             list_of_zeros[idx] = 1
             self.win_states.append(tuple(list_of_zeros))
         self.win_states = tuple(self.win_states)
-
         self._untried_actions = self.untried_actions()
 
         # print('new')
@@ -132,7 +131,7 @@ class MonteCarloTreeSearchNode():
     def q(self):
         wins = self._results[1]
         loses = self._results[-1]
-        return wins - loses
+        return wins #- loses
 
     def n(self):
         return self._number_of_visits
@@ -197,12 +196,10 @@ class MonteCarloTreeSearchNode():
         simulation_no = 100
 
         for i in range(simulation_no):
-            # print(i)
             v = self._tree_policy()
             reward = v.rollout()
             v.backpropagate(reward)
-
-        return self.best_child(c_param=0.)
+        return self.best_child(c_param=0.1)
 
     def get_legal_actions(self):
         possible_actions = []
@@ -274,16 +271,11 @@ class MonteCarloTreeSearchNode():
         return tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(state, action)])
 
 
-
-
-
-
-
-
 # root = MonteCarloTreeSearchNode(state=(1, 3, 5, 7))
-# root.untried_actions()
 # selected_node = root.best_action()
-# print(root.best_action().parent_action)
+#
+# print([child._results for child in root.children])
+# print(root.q())
 
 
 nim = Nim()
@@ -291,19 +283,25 @@ nim = Nim()
 player_1_wins = 0
 player_2_wins = 0
 
-for _ in range(100):
+for _ in range(1000):
     nim.reset()
     turn = 0
     while not nim.is_terminal(nim.current_state):
         if not turn % 2:
             node = MonteCarloTreeSearchNode(state=nim.current_state)
             action = node.best_action().parent_action
+            # print('\n')
+            # print(nim.current_state, action)
+            # print([child.parent_action for child in node.children])
+            # print([child._results for child in node.children])
+            # print(node.q())
         else:
             action = random.choice(nim.get_possible_actions(nim.current_state))
 
         nim.step(action)
 
         if nim.is_terminal(nim.current_state):
+            # print('---------------------------------')
             if turn % 2:
                 player_1_wins += 1
             else:
