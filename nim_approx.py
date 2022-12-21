@@ -19,7 +19,7 @@ class QLearningAgent:
 
     def function_bits(self, state):
 
-        first_part = -1 if not int(nim_sum(state)) else 1
+        first_part = 1 if not int(nim_sum(state)) else -1
         second_part = 1 if state in nim.win_states else -1
 
         return first_part, second_part
@@ -45,10 +45,12 @@ class QLearningAgent:
         gamma = self.discount
         learning_rate = self.alpha
 
-        possible_actions = nim.get_possible_actions(state)
+        possible_actions = nim.get_possible_actions(next_state)
         next_states = [tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(state, action)]) for action in possible_actions]
         next_states_qvalues = [self.get_qvalue(next_state, action) for next_state in next_states]
-        # print(next_states_qvalues)
+        print(next_states_qvalues)
+
+        # best_action_qvalue = self.get_qvalue(next_state, self.get_best_action(next_state))
 
         flags = self.function_bits(state)
         error = (reward + gamma * max(next_states_qvalues) - self.get_qvalue(state, action))
@@ -158,13 +160,13 @@ class Nim:
         assert action in self.get_possible_actions(
             state), "cannot do action %s from state %s" % (action, state)
 
-        reward = 0
+        reward = -0.01
 
-        if self.is_terminal(next_state):
-            reward = -0.05
+        # if self.is_terminal(next_state):
+        #     reward = -0.05
 
         if next_state in self.win_states:
-            reward = 0.05
+            reward = 0.2
 
         if not int(nim_sum(next_state)):
             reward = 0.05
