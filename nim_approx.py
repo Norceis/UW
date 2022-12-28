@@ -35,7 +35,7 @@ class QLearningAgent:
             if not int(nim_sum(state)):
                 second_part = 1
             else:
-                second_part = -2
+                second_part = -0.6
 
         return first_part, second_part
 
@@ -45,9 +45,6 @@ class QLearningAgent:
 
         first_part, second_part = self.function_values(next_state)
 
-        # if nim.is_terminal(next_state):
-        # return first_part * self.weights[0]
-        # else:
         return first_part * self.weights[0] + second_part * self.weights[1]
 
     def get_value(self, state):
@@ -65,30 +62,14 @@ class QLearningAgent:
         gamma = self.discount
         learning_rate = self.alpha
 
-        # possible_actions = nim.get_possible_actions(next_state)
-        # next_next_states = [tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(next_state, action)]) for action in possible_actions]
-        # next_states_qvalues = [self.get_qvalue(next_next_state, action) for next_next_state in next_next_states]
-        # print(next_states_qvalues)
-
         best_action_qvalue = self.get_qvalue(next_state, self.get_best_action(next_state))
 
-        # if nim.is_terminal(next_state):
         values = self.function_values(next_state)
         error = (reward + gamma * best_action_qvalue - self.get_qvalue(state, action))
 
-        print('error:', error)
+        # print('error:', error)
         for idx in range(len(self.weights)):
             self.weights[idx] += learning_rate * error * values[idx]
-        # else:
-        #     flags = self.function_bits(state)
-        #     error = (reward + gamma * best_action_qvalue - self.get_qvalue(state, action))
-        #     self.weights[0] += learning_rate * error * flags[0]
-
-        # for idx in range(len(self.weights)):
-        #     if self.weights[idx] > 1:
-        #         self.weights[idx] = 1
-        #     elif self.weights[idx] < 0:
-        #         self.weights[idx] = 0
 
     def get_best_action(self, state):
 
@@ -232,13 +213,14 @@ def play_and_train_ql(env, agent, player=0):
     done = False
     turn = 0 if not player else 1
 
+    # print('===================================================')
     while not done:
         if not turn % 2:
             # get agent to pick action given state state.
             action = agent.get_action(state)
 
             next_state, reward, done, _ = env.step(action)
-            print(state, reward, next_state)
+            # print(state, reward, next_state, agent.weights)
             agent.update(state, action, reward, next_state)
 
             state = next_state
@@ -256,7 +238,7 @@ def play_and_train_ql(env, agent, player=0):
 
 nim = Nim()
 
-agent_ql_first = QLearningAgent(alpha=0.1, epsilon=0.25, discount=0.99,
+agent_ql_first = QLearningAgent(alpha=0.05, epsilon=0.25, discount=0.99,
                                 get_legal_actions=nim.get_possible_actions)
 
 agent_ql_second = QLearningAgent(alpha=0.5, epsilon=0.25, discount=0.99,
@@ -264,11 +246,10 @@ agent_ql_second = QLearningAgent(alpha=0.5, epsilon=0.25, discount=0.99,
 first_weight = []
 second_weight = []
 for i in range(1000):
-    print(agent_ql_first.weights)
     first_weight.append(agent_ql_first.weights[0])
     second_weight.append(agent_ql_first.weights[1])
     play_and_train_ql(nim, agent_ql_first, 0)
-    # play_and_train_ql(nim, agent_ql_second, 1)
+    play_and_train_ql(nim, agent_ql_second, 1)
 
 # play ql vs random
 player_1_wins = 0
@@ -294,8 +275,88 @@ for _ in range(10000):
         turn += 1
 
 print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
-plt.plot(first_weight, linewidth=0.5, label='is winning state')
-plt.plot(second_weight, linewidth=0.5, label='nim sum=0')
-plt.legend()
-plt.ylabel('weight value')
-plt.show()
+
+player_1_wins = 0
+player_2_wins = 0
+
+for _ in range(10000):
+    nim.reset()
+    turn = 0
+    while not nim.is_terminal(nim.current_state):
+        if not turn % 2:
+            action = random.choice(nim.get_possible_actions(nim.current_state))
+        else:
+            # action = random.choice(nim.get_possible_actions(nim.current_state))
+            action = agent_ql_first.get_best_action(nim.current_state)
+
+        nim.step(action)
+
+        if nim.is_terminal(nim.current_state):
+            if turn % 2:
+                player_1_wins += 1
+            else:
+                player_2_wins += 1
+
+        turn += 1
+
+print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+
+player_1_wins = 0
+player_2_wins = 0
+
+for _ in range(10000):
+    nim.reset()
+    turn = 0
+    while not nim.is_terminal(nim.current_state):
+        if not turn % 2:
+            action = agent_ql_first.get_best_action(nim.current_state)
+        else:
+            # action = random.choice(nim.get_possible_actions(nim.current_state))
+            action = agent_ql_second.get_best_action(nim.current_state)
+
+        nim.step(action)
+
+        if nim.is_terminal(nim.current_state):
+            if turn % 2:
+                player_1_wins += 1
+            else:
+                player_2_wins += 1
+
+        turn += 1
+
+print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+
+player_1_wins = 0
+player_2_wins = 0
+
+for _ in range(10000):
+    nim.reset()
+    turn = 0
+    while not nim.is_terminal(nim.current_state):
+        if not turn % 2:
+            action = agent_ql_second.get_best_action(nim.current_state)
+        else:
+            # action = random.choice(nim.get_possible_actions(nim.current_state))
+            action = agent_ql_first.get_best_action(nim.current_state)
+
+        nim.step(action)
+
+        if nim.is_terminal(nim.current_state):
+            if turn % 2:
+                player_1_wins += 1
+            else:
+                player_2_wins += 1
+
+        turn += 1
+
+print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+
+
+
+
+
+# plt.plot(first_weight, linewidth=0.5, label='is winning state')
+# plt.plot(second_weight, linewidth=0.5, label='nim sum=0')
+# plt.legend()
+# plt.ylabel('weight value')
+# plt.show()
