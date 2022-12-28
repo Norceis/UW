@@ -19,23 +19,23 @@ class QLearningAgent:
                         # [0,0]
     def function_values(self, state):
 
-        second_part = 0.1 if not int(nim_sum(state)) else 0
-        first_part = 1 if state in nim.win_states else 0
+        # second_part = 0.1 if not int(nim_sum(state)) else 0
+        # first_part = 1 if state in nim.win_states else 0
 
-        # if state in nim.win_states:
-        #     first_part = -1
-        #     second_part = 0
-        #
-        # elif nim.is_terminal(state):
-        #     first_part = 0
-        #     second_part = 0
-        #
-        # else:
-        #     first_part = 0
-        #     if not int(nim_sum(state)):
-        #         second_part = -1
-        #     else:
-        #         second_part = 1
+        if state in nim.win_states:
+            first_part = 1
+            second_part = 0
+
+        elif nim.is_terminal(state):
+            first_part = 0
+            second_part = 0
+
+        else:
+            first_part = 0
+            if not int(nim_sum(state)):
+                second_part = 1
+            else:
+                second_part = -2
 
         return first_part, second_part
 
@@ -45,7 +45,10 @@ class QLearningAgent:
 
         first_part, second_part = self.function_values(next_state)
 
-        return first_part * self.weights[0]# + second_part * self.weights[1]
+        # if nim.is_terminal(next_state):
+        # return first_part * self.weights[0]
+        # else:
+        return first_part * self.weights[0] + second_part * self.weights[1]
 
     def get_value(self, state):
 
@@ -70,7 +73,7 @@ class QLearningAgent:
         best_action_qvalue = self.get_qvalue(next_state, self.get_best_action(next_state))
 
         # if nim.is_terminal(next_state):
-        values = self.function_values(state)
+        values = self.function_values(next_state)
         error = (reward + gamma * best_action_qvalue - self.get_qvalue(state, action))
 
         print('error:', error)
@@ -193,7 +196,7 @@ class Nim:
 
         if next_state in self.win_states:
             reward += 1
-
+        #
         # if not int(nim_sum(next_state)):
         #     reward += 0.15
 
