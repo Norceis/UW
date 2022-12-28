@@ -15,20 +15,37 @@ class QLearningAgent:
         self.alpha = alpha
         self.epsilon = epsilon
         self.discount = discount
-        self.weights = [0.5, 0.5]
+        self.weights = np.random.uniform(low=-1, high=1, size=2)
+                        # [0,0]
+    def function_values(self, state):
 
-    def function_bits(self, state):
+        second_part = 0.1 if not int(nim_sum(state)) else 0
+        first_part = 1 if state in nim.win_states else 0
 
-        first_part = 1 if not int(nim_sum(state)) else -1
-        second_part = 1 if state in nim.win_states else -1
+        # if state in nim.win_states:
+        #     first_part = -1
+        #     second_part = 0
+        #
+        # elif nim.is_terminal(state):
+        #     first_part = 0
+        #     second_part = 0
+        #
+        # else:
+        #     first_part = 0
+        #     if not int(nim_sum(state)):
+        #         second_part = -1
+        #     else:
+        #         second_part = 1
 
         return first_part, second_part
 
     def get_qvalue(self, state, action):
 
-        first_part, second_part = self.function_bits(state)
+        next_state = nim.get_next_states(state, action)
 
-        return first_part * self.weights[0] + second_part * self.weights[1]
+        first_part, second_part = self.function_values(next_state)
+
+        return first_part * self.weights[0]# + second_part * self.weights[1]
 
     def get_value(self, state):
 
@@ -45,18 +62,24 @@ class QLearningAgent:
         gamma = self.discount
         learning_rate = self.alpha
 
-        possible_actions = nim.get_possible_actions(next_state)
-        next_states = [tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(state, action)]) for action in possible_actions]
-        next_states_qvalues = [self.get_qvalue(next_state, action) for next_state in next_states]
-        print(next_states_qvalues)
+        # possible_actions = nim.get_possible_actions(next_state)
+        # next_next_states = [tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(next_state, action)]) for action in possible_actions]
+        # next_states_qvalues = [self.get_qvalue(next_next_state, action) for next_next_state in next_next_states]
+        # print(next_states_qvalues)
 
-        # best_action_qvalue = self.get_qvalue(next_state, self.get_best_action(next_state))
+        best_action_qvalue = self.get_qvalue(next_state, self.get_best_action(next_state))
 
-        flags = self.function_bits(state)
-        error = (reward + gamma * max(next_states_qvalues) - self.get_qvalue(state, action))
+        # if nim.is_terminal(next_state):
+        values = self.function_values(state)
+        error = (reward + gamma * best_action_qvalue - self.get_qvalue(state, action))
 
+        print('error:', error)
         for idx in range(len(self.weights)):
-            self.weights[idx] += learning_rate * error * flags[idx]
+            self.weights[idx] += learning_rate * error * values[idx]
+        # else:
+        #     flags = self.function_bits(state)
+        #     error = (reward + gamma * best_action_qvalue - self.get_qvalue(state, action))
+        #     self.weights[0] += learning_rate * error * flags[0]
 
         # for idx in range(len(self.weights)):
         #     if self.weights[idx] > 1:
@@ -80,6 +103,9 @@ class QLearningAgent:
 
         return random.choice([k for k, v in possible_actions_dict.items() if v == sorted_dict[-1][-1]])
 
+        # value_of_actions = [self.get_qvalue(state=state, action=action) for action in possible_actions]
+        # best_score = self.get_value(state)
+        # return random.choice([possible_actions[idx] for idx, score in enumerate(value_of_actions) if score == best_score])
     def get_action(self, state):
 
         possible_actions = self.get_legal_actions(state)
@@ -160,16 +186,16 @@ class Nim:
         assert action in self.get_possible_actions(
             state), "cannot do action %s from state %s" % (action, state)
 
-        reward = -0.01
+        reward = 0
 
         # if self.is_terminal(next_state):
-        #     reward = -0.05
+        #     reward += -1
 
         if next_state in self.win_states:
-            reward = 0.2
+            reward += 1
 
-        if not int(nim_sum(next_state)):
-            reward = 0.05
+        # if not int(nim_sum(next_state)):
+        #     reward += 0.15
 
         return reward
 
@@ -196,12 +222,7 @@ def nim_sum(state):
 
 
 def play_and_train_ql(env, agent, player=0):
-    """
-    This function should
-    - run a full game, actions given by agent's e-greedy policy
-    - train agent using agent.update(...) whenever it is possible
-    - return total reward
-    """
+
     total_reward = 0.0
     state = env.reset()
 
@@ -214,7 +235,7 @@ def play_and_train_ql(env, agent, player=0):
             action = agent.get_action(state)
 
             next_state, reward, done, _ = env.step(action)
-
+            print(state, reward, next_state)
             agent.update(state, action, reward, next_state)
 
             state = next_state
@@ -223,9 +244,8 @@ def play_and_train_ql(env, agent, player=0):
             action = random.choice(env.get_possible_actions(state))
             next_state, reward, done, _ = env.step(action)
             state = next_state
-
+        turn += 1
         if done:
-            turn += 1
             break
 
     return total_reward
@@ -233,16 +253,19 @@ def play_and_train_ql(env, agent, player=0):
 
 nim = Nim()
 
-agent_ql_first = QLearningAgent(alpha=0.5, epsilon=0.25, discount=0.99,
+agent_ql_first = QLearningAgent(alpha=0.1, epsilon=0.25, discount=0.99,
                                 get_legal_actions=nim.get_possible_actions)
 
 agent_ql_second = QLearningAgent(alpha=0.5, epsilon=0.25, discount=0.99,
                                  get_legal_actions=nim.get_possible_actions)
-rewards = []
-for i in range(10000):
+first_weight = []
+second_weight = []
+for i in range(1000):
     print(agent_ql_first.weights)
-    rewards.append(play_and_train_ql(nim, agent_ql_first, 0))
-    play_and_train_ql(nim, agent_ql_second, 1)
+    first_weight.append(agent_ql_first.weights[0])
+    second_weight.append(agent_ql_first.weights[1])
+    play_and_train_ql(nim, agent_ql_first, 0)
+    # play_and_train_ql(nim, agent_ql_second, 1)
 
 # play ql vs random
 player_1_wins = 0
@@ -268,6 +291,8 @@ for _ in range(10000):
         turn += 1
 
 print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
-plt.plot(rewards, linewidth=0.05)
-plt.ylabel('some numbers')
+plt.plot(first_weight, linewidth=0.5, label='is winning state')
+plt.plot(second_weight, linewidth=0.5, label='nim sum=0')
+plt.legend()
+plt.ylabel('weight value')
 plt.show()
