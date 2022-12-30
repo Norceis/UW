@@ -16,11 +16,8 @@ class QLearningAgent:
         self.epsilon = epsilon
         self.discount = discount
         self.weights = np.random.uniform(low=-1, high=1, size=2)
-                        # [0,0]
-    def function_values(self, state):
 
-        # second_part = 0.1 if not int(nim_sum(state)) else 0
-        # first_part = 1 if state in nim.win_states else 0
+    def function_values(self, state):
 
         if state in nim.win_states:
             first_part = 1
@@ -42,15 +39,14 @@ class QLearningAgent:
     def get_qvalue(self, state, action):
 
         next_state = nim.get_next_states(state, action)
-
         first_part, second_part = self.function_values(next_state)
 
         return first_part * self.weights[0] + second_part * self.weights[1]
 
+
     def get_value(self, state):
 
         possible_actions = self.get_legal_actions(state)
-
         if len(possible_actions) == 0:
             return 0.0
 
@@ -67,7 +63,6 @@ class QLearningAgent:
         values = self.function_values(next_state)
         error = (reward + gamma * best_action_qvalue - self.get_qvalue(state, action))
 
-        # print('error:', error)
         for idx in range(len(self.weights)):
             self.weights[idx] += learning_rate * error * values[idx]
 
@@ -87,9 +82,7 @@ class QLearningAgent:
 
         return random.choice([k for k, v in possible_actions_dict.items() if v == sorted_dict[-1][-1]])
 
-        # value_of_actions = [self.get_qvalue(state=state, action=action) for action in possible_actions]
-        # best_score = self.get_value(state)
-        # return random.choice([possible_actions[idx] for idx, score in enumerate(value_of_actions) if score == best_score])
+
     def get_action(self, state):
 
         possible_actions = self.get_legal_actions(state)
@@ -238,7 +231,7 @@ def play_and_train_ql(env, agent, player=0):
 
 nim = Nim()
 
-agent_ql_first = QLearningAgent(alpha=0.05, epsilon=0.25, discount=0.99,
+agent_ql_first = QLearningAgent(alpha=0.01, epsilon=0.25, discount=0.99,
                                 get_legal_actions=nim.get_possible_actions)
 
 agent_ql_second = QLearningAgent(alpha=0.5, epsilon=0.25, discount=0.99,
@@ -274,7 +267,7 @@ for _ in range(10000):
 
         turn += 1
 
-print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+print(f'Algorithm on correct starting turn vs random winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
 
 player_1_wins = 0
 player_2_wins = 0
@@ -299,8 +292,8 @@ for _ in range(10000):
 
         turn += 1
 
-print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
-
+print(f'Algorithm on incorrect starting turn vs random winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+#
 player_1_wins = 0
 player_2_wins = 0
 
@@ -324,8 +317,8 @@ for _ in range(10000):
 
         turn += 1
 
-print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
-
+print(f'Algorithm starting on correct turns vs algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+#
 player_1_wins = 0
 player_2_wins = 0
 
@@ -349,14 +342,10 @@ for _ in range(10000):
 
         turn += 1
 
-print(f'Algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+print(f'Algorithm starting on incorrect turns vs algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
 
-
-
-
-
-# plt.plot(first_weight, linewidth=0.5, label='is winning state')
-# plt.plot(second_weight, linewidth=0.5, label='nim sum=0')
-# plt.legend()
-# plt.ylabel('weight value')
-# plt.show()
+plt.plot(first_weight, linewidth=0.5, label='is winning state')
+plt.plot(second_weight, linewidth=0.5, label='nim sum=0')
+plt.legend()
+plt.ylabel('weight value')
+plt.show()
