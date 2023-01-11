@@ -8,7 +8,7 @@ from collections import defaultdict
 from matplotlib import pyplot as plt
 
 
-class QLearningAgent:
+class ApproximatedAgent:
     def __init__(self, alpha, epsilon, discount, get_legal_actions):
 
         self.get_legal_actions = get_legal_actions
@@ -42,7 +42,6 @@ class QLearningAgent:
         first_part, second_part = self.function_values(next_state)
 
         return first_part * self.weights[0] + second_part * self.weights[1]
-
 
     def get_value(self, state):
 
@@ -81,7 +80,6 @@ class QLearningAgent:
         sorted_dict = sorted(possible_actions_dict.items(), key=lambda kv: kv[1])
 
         return random.choice([k for k, v in possible_actions_dict.items() if v == sorted_dict[-1][-1]])
-
 
     def get_action(self, state):
 
@@ -180,7 +178,7 @@ class Nim:
         prev_state = self.current_state
         self.current_state = tuple([idx_1 - idx_2 for idx_1, idx_2 in zip(self.current_state, action)])
         return self.current_state, self.get_reward(prev_state, action, self.current_state), \
-               self.is_terminal(self.current_state), None
+            self.is_terminal(self.current_state), None
 
 
 def nim_sum(state):
@@ -199,7 +197,6 @@ def nim_sum(state):
 
 
 def play_and_train_ql(env, agent, player=0):
-
     total_reward = 0.0
     state = env.reset()
 
@@ -231,29 +228,29 @@ def play_and_train_ql(env, agent, player=0):
 
 nim = Nim()
 
-agent_ql_first = QLearningAgent(alpha=0.01, epsilon=0.25, discount=0.99,
-                                get_legal_actions=nim.get_possible_actions)
+approximated_agent_first = ApproximatedAgent(alpha=0.02, epsilon=0.25, discount=0.99,
+                                             get_legal_actions=nim.get_possible_actions)
 
-agent_ql_second = QLearningAgent(alpha=0.5, epsilon=0.25, discount=0.99,
-                                 get_legal_actions=nim.get_possible_actions)
+approximated_agent_second = ApproximatedAgent(alpha=0.5, epsilon=0.25, discount=0.99,
+                                              get_legal_actions=nim.get_possible_actions)
 first_weight = []
 second_weight = []
-for i in range(1000):
-    first_weight.append(agent_ql_first.weights[0])
-    second_weight.append(agent_ql_first.weights[1])
-    play_and_train_ql(nim, agent_ql_first, 0)
-    play_and_train_ql(nim, agent_ql_second, 1)
+for i in range(10000):
+    first_weight.append(approximated_agent_first.weights[0])
+    second_weight.append(approximated_agent_first.weights[1])
+    play_and_train_ql(nim, approximated_agent_first, 0)
+    # play_and_train_ql(nim, approximated_agent_second, 1)
 
 # play ql vs random
 player_1_wins = 0
 player_2_wins = 0
 
-for _ in range(10000):
+for _ in range(1000):
     nim.reset()
     turn = 0
     while not nim.is_terminal(nim.current_state):
         if not turn % 2:
-            action = agent_ql_first.get_best_action(nim.current_state)
+            action = approximated_agent_first.get_best_action(nim.current_state)
         else:
             action = random.choice(nim.get_possible_actions(nim.current_state))
 
@@ -269,80 +266,80 @@ for _ in range(10000):
 
 print(f'Algorithm on correct starting turn vs random winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
 
-player_1_wins = 0
-player_2_wins = 0
-
-for _ in range(10000):
-    nim.reset()
-    turn = 0
-    while not nim.is_terminal(nim.current_state):
-        if not turn % 2:
-            action = random.choice(nim.get_possible_actions(nim.current_state))
-        else:
-            # action = random.choice(nim.get_possible_actions(nim.current_state))
-            action = agent_ql_first.get_best_action(nim.current_state)
-
-        nim.step(action)
-
-        if nim.is_terminal(nim.current_state):
-            if turn % 2:
-                player_1_wins += 1
-            else:
-                player_2_wins += 1
-
-        turn += 1
-
-print(f'Algorithm on incorrect starting turn vs random winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+# player_1_wins = 0
+# player_2_wins = 0
 #
-player_1_wins = 0
-player_2_wins = 0
-
-for _ in range(10000):
-    nim.reset()
-    turn = 0
-    while not nim.is_terminal(nim.current_state):
-        if not turn % 2:
-            action = agent_ql_first.get_best_action(nim.current_state)
-        else:
-            # action = random.choice(nim.get_possible_actions(nim.current_state))
-            action = agent_ql_second.get_best_action(nim.current_state)
-
-        nim.step(action)
-
-        if nim.is_terminal(nim.current_state):
-            if turn % 2:
-                player_1_wins += 1
-            else:
-                player_2_wins += 1
-
-        turn += 1
-
-print(f'Algorithm starting on correct turns vs algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+# for _ in range(10000):
+#     nim.reset()
+#     turn = 0
+#     while not nim.is_terminal(nim.current_state):
+#         if not turn % 2:
+#             action = random.choice(nim.get_possible_actions(nim.current_state))
+#         else:
+#             # action = random.choice(nim.get_possible_actions(nim.current_state))
+#             action = approximated_agent_first.get_best_action(nim.current_state)
 #
-player_1_wins = 0
-player_2_wins = 0
-
-for _ in range(10000):
-    nim.reset()
-    turn = 0
-    while not nim.is_terminal(nim.current_state):
-        if not turn % 2:
-            action = agent_ql_second.get_best_action(nim.current_state)
-        else:
-            # action = random.choice(nim.get_possible_actions(nim.current_state))
-            action = agent_ql_first.get_best_action(nim.current_state)
-
-        nim.step(action)
-
-        if nim.is_terminal(nim.current_state):
-            if turn % 2:
-                player_1_wins += 1
-            else:
-                player_2_wins += 1
-
-        turn += 1
-
-print(f'Algorithm starting on incorrect turns vs algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+#         nim.step(action)
+#
+#         if nim.is_terminal(nim.current_state):
+#             if turn % 2:
+#                 player_1_wins += 1
+#             else:
+#                 player_2_wins += 1
+#
+#         turn += 1
+#
+# print(f'Algorithm on incorrect starting turn vs random winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+# #
+# player_1_wins = 0
+# player_2_wins = 0
+#
+# for _ in range(10000):
+#     nim.reset()
+#     turn = 0
+#     while not nim.is_terminal(nim.current_state):
+#         if not turn % 2:
+#             action = approximated_agent_first.get_best_action(nim.current_state)
+#         else:
+#             # action = random.choice(nim.get_possible_actions(nim.current_state))
+#             action = approximated_agent_second.get_best_action(nim.current_state)
+#
+#         nim.step(action)
+#
+#         if nim.is_terminal(nim.current_state):
+#             if turn % 2:
+#                 player_1_wins += 1
+#             else:
+#                 player_2_wins += 1
+#
+#         turn += 1
+#
+# print(f'Algorithm starting on correct turns vs algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
+# #
+# player_1_wins = 0
+# player_2_wins = 0
+#
+# for _ in range(10000):
+#     nim.reset()
+#     turn = 0
+#     while not nim.is_terminal(nim.current_state):
+#         if not turn % 2:
+#             action = approximated_agent_second.get_best_action(nim.current_state)
+#         else:
+#             # action = random.choice(nim.get_possible_actions(nim.current_state))
+#             action = approximated_agent_first.get_best_action(nim.current_state)
+#
+#         nim.step(action)
+#
+#         if nim.is_terminal(nim.current_state):
+#             if turn % 2:
+#                 player_1_wins += 1
+#             else:
+#                 player_2_wins += 1
+#
+#         turn += 1
+#
+# print(f'Algorithm starting on incorrect turns vs algorithm winrate: {player_1_wins * 100 / (player_1_wins + player_2_wins)}%')
 
 plt.plot(first_weight, linewidth=0.5, label='is winning state')
 plt.plot(second_weight, linewidth=0.5, label='nim sum=0')
